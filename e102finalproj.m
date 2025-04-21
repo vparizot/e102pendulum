@@ -5,7 +5,7 @@ close all
 %% Define Variables
 g = 9.8; % gravity
 lp = 0.5; %length of pendulum
-alpha = 0.5; %rad/s^2
+alpha = 0; %rad/s^2
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -56,7 +56,7 @@ Da = [D];
 %% Find wn and z for 2nd order with s, displacement
 syms omegan
 z = 0.999; %Set damping high for minimal overshoot
-ts = 4/(z*omegan) == 10; % for 2 percent settl time
+ts = 4/(z*omegan) == 10; % for 2 percent settl time, can change 10 ->5, 8 to be conservative
 wn = solve(ts, omegan);
 % wn = soln.omegan %solved w/ omegan
 
@@ -65,34 +65,48 @@ c = wn^2;
 p1 = eval((-b+sqrt(b^2-4*c)) / 2);
 p2 = eval((-b-sqrt(b^2-4*c)) / 2);
 
-%% place poles & find K's
+%% place poles & find K's (Dominant poles system)
 des_poles = [p1 p2 real(p1)*10 (real(p1)+0.02)*10 (real(p1)+.01)*10]; % by overshoot & settling time to find; note 5 poles bc of augmented xi
 obs_poles = 5*[p1 p2 real(p1)*10 (real(p1)+0.02)*10]; % 5x times faster than desired poles (could do up to 10x, note only 4 poles bc use regular A and C for observer
+
+% for controller, K = place(Aa,Ba,P1) <-- use augmented
 augmentedK = place(Aa, Ba, des_poles) % for augmented, you design observer
-% augmentedK = 1.0e+04 * 4.4622   -2.5503   -0.6517   -4.1172   -1.2864
-Ki = augmentedK(1); % this should be a positive value 
+Ki = -1*augmentedK(1); 
 K = augmentedK(2:5);
 
+% for observer, L = (place (A',C',P2))' 
 L = place(A', C', obs_poles) %% use regular C and A
+L = L';
+
+% need to compute:
+% Feedback Gain: u = -k' x
+% k = place(A, B, R)
+% Anew = A-BK'
+% eig(Anew) = K=place(A,B,R)
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% STEP 4: Build a Simulink model of the nonlinear cart-pendulum plant
 %% together with the control system.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+% done
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% STEP 5: Use the control design parameters from the designs in Part I 
 %% and run the simulation
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% done
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% STEP 6: Fine-tune the design to achieve the desired specifications.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+% can change: 
+% ts, wn, dominant poles
+% saturate at 0.5
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% STEP 7: Increment the angular acceleration disturbance w = alpha(t) to 
 %% find the largest allowable disturbance that maintains closed loop stability.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
