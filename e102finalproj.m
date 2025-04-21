@@ -4,18 +4,18 @@ close all
 
 %% Define Variables
 g = 9.8; % gravity
-L = 0.5;
+lp = 0.5; %length of pendulum
 alpha = 0.5; %rad/s^2
-lp = 12; % CHANGE
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% STEP 1: Find A, B, C, D
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% Define A,B,C,D Matrix
-A = [0 1 0 0; g/L 0 0 0; 0 0 0 1; 0 0 0 0];
+A = [0 1 0 0; g/lp 0 0 0; 0 0 0 1; 0 0 0 0];
 
-B = [0; -1/L ; 0; 1];
+B = [0; -1/lp ; 0; 1];
 
 C = [1 0 0 0; 0 0 1 0];
 
@@ -56,7 +56,6 @@ Da = [D];
 %% Find wn and z for 2nd order with s, displacement
 syms omegan
 z = 0.999; %Set damping high for minimal overshoot
-% Mp = exp((-pi*z)/(sqrt(1-z^2))) == 0.00001; %% TODO: ASK ABOUT 0 vs r. small
 ts = 4/(z*omegan) == 10; % for 2 percent settl time
 wn = solve(ts, omegan);
 % wn = soln.omegan %solved w/ omegan
@@ -67,14 +66,14 @@ p1 = eval((-b+sqrt(b^2-4*c)) / 2);
 p2 = eval((-b-sqrt(b^2-4*c)) / 2);
 
 %% place poles & find K's
-des_poles = [p1 p2 real(p1)*10 (real(p1)+0.02)*10 (real(p1)+.01)*10]; % by overshoot & settling time to find
-obs_poles = 5*des_poles; % 5x times faster than desired poles
+des_poles = [p1 p2 real(p1)*10 (real(p1)+0.02)*10 (real(p1)+.01)*10]; % by overshoot & settling time to find; note 5 poles bc of augmented xi
+obs_poles = 5*[p1 p2 real(p1)*10 (real(p1)+0.02)*10]; % 5x times faster than desired poles (could do up to 10x, note only 4 poles bc use regular A and C for observer
 augmentedK = place(Aa, Ba, des_poles) % for augmented, you design observer
 % augmentedK = 1.0e+04 * 4.4622   -2.5503   -0.6517   -4.1172   -1.2864
-Ki = augmentedK(1);
+Ki = augmentedK(1); % this should be a positive value 
 K = augmentedK(2:5);
 
-L = place(Aa', Ca', obs_poles)
+L = place(A', C', obs_poles) %% use regular C and A
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% STEP 4: Build a Simulink model of the nonlinear cart-pendulum plant
@@ -97,7 +96,3 @@ L = place(Aa', Ca', obs_poles)
 %% STEP 7: Increment the angular acceleration disturbance w = alpha(t) to 
 %% find the largest allowable disturbance that maintains closed loop stability.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-
-

@@ -5,13 +5,14 @@ close all
 %% Define Variables
 g = 9.8; % gravity
 L = 0.5;
-
+alpha = 0.5; %rad/s^2
+u=
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% STEP 1: Find A, B, C, D
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% Define Matrix
+%% Define A,B,C,D Matrix
 A = [0 1 0 0; g/L 0 0 0; 0 0 0 1; 0 0 0 0];
 
 B = [0; -1/L ; 0; 1];
@@ -28,22 +29,75 @@ Bprime = [0; 1; 0; 0];
 %% the linearized plant.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% eigenvalues of A
+%% STABILITY: Eigenvalues of A
 eigenA = eig(A);  % = 4.4272, -4.4272, 0, 0
-%there's a real eigenvalue, so not stable
+% there's a real eigenvalue, so not stable
 
-%% Find mc for controlability
+%% CONTROLLABILITY: Find mc for controlability
 mc = [B A*B A^2*B A^3*B];
 rankMc = rank(mc); % = 4, full rank so controllable
 
-%% Find observability matric
-mo = [C; C*A; C*A^2; C*A^3]
-rankMo = rank(mo); % = 4, so observable bc same as # of variables in state space
+%% OBSERVABILITY: Find observability matric
+mo = [C; C*A; C*A^2; C*A^3];
+rankMo = rank(mo); % = 4, full rank, so observable bc same as # of variables in state space
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% STEP 3: Design a state feedback control system with integral action and 
 %% an observer for the linearized plant. Use pole placement design.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% Define Augmented System w/ state vars, zeta & zeta_dot
+% augmentedZeta = [xI; xbar];
+Aa = [zeros(1,1) -C(2,:); zeros(4,1) A]; % use 2nd row of c bc we only care about posistion for timing
+Ba = [0; B];
+Ca = [zeros(2,1) C];
+Da = [D];
+
+%% Find wn and z for 2nd order with s, displacement
+syms omegan
+z = 0.999; %Set damping high for minimal overshoot
+% Mp = exp((-pi*z)/(sqrt(1-z^2))) == 0.00001; %% TODO: ASK ABOUT 0 vs r. small
+ts = 4/(z*omegan) == 10; % for 2 percent settl time
+wn = solve(ts, omegan);
+% wn = soln.omegan %solved w/ omegan
+
+b = 2*z*wn;
+c = wn^2;
+p1 = eval((-b+sqrt(b^2-4*c)) / 2);
+p2 = eval((-b-sqrt(b^2-4*c)) / 2);
+
+%% place poles & find K's
+des_poles = [p1 p2 real(p1)*10 (real(p1)+0.02)*10 (real(p1)+.01)*10]; % by overshoot & settling time to find
+obs_poles = 5*des_poles; % 5x times faster than desired poles
+augmentedK = place(Aa, Ba, des_poles) % for augmented, you design observer
+% augmentedK = 1.0e+04 * 4.4622   -2.5503   -0.6517   -4.1172   -1.2864
+Ki = augmentedK(1);
+K = augmentedK(2:5);
+
+L = place(Aa', Ca', obs_poles)
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% STEP 4: Build a Simulink model of the nonlinear cart-pendulum plant
+%% together with the control system.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% STEP 5: Use the control design parameters from the designs in Part I 
+%% and run the simulation
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% STEP 6: Fine-tune the design to achieve the desired specifications.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% STEP 7: Increment the angular acceleration disturbance w = alpha(t) to 
+%% find the largest allowable disturbance that maintains closed loop stability.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 
 
