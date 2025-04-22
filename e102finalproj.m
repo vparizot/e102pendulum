@@ -1,12 +1,11 @@
-%final proj e102
+%% final proj e102
 clear
 close all
 
 %% Define Variables
 g = 9.8; % gravity
 lp = 0.5; %length of pendulum
-alpha = 0; %rad/s^2
-
+alpha = 0.5; %rad/s^2
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% STEP 1: Find A, B, C, D
@@ -22,7 +21,6 @@ C = [1 0 0 0; 0 0 1 0];
 D = [zeros(2,1)];
 
 Bprime = [0; 1; 0; 0];
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% STEP 2: Establish the stability, controllability and observability of 
@@ -55,35 +53,42 @@ Da = [D];
 
 %% Find wn and z for 2nd order with s, displacement
 syms omegan
-z = 0.999; %Set damping high for minimal overshoot
-ts = 4/(z*omegan) == 10; % for 2 percent settl time, can change 10 ->5, 8 to be conservative
+z = 0.999; % Set damping high for minimal overshoot
+ts = 4.6/(z*omegan) == 3.3; % for 2 percent settl time, can change 10 ->5, 8 to be conservative
 wn = solve(ts, omegan);
 % wn = soln.omegan %solved w/ omegan
 
 b = 2*z*wn;
 c = wn^2;
-p1 = eval((-b+sqrt(b^2-4*c)) / 2);
-p2 = eval((-b-sqrt(b^2-4*c)) / 2);
+% p1 = eval((-b+sqrt(b^2-4*c)) / 2);
+% p2 = eval((-b-sqrt(b^2-4*c)) / 2);
+p1 = eval(-z*wn+(j*wn)*sqrt(1-z^2));
+p2 = eval(-z*wn-(j*wn)*sqrt(1-z^2));
 
 %% place poles & find K's (Dominant poles system)
-des_poles = [p1 p2 real(p1)*10 (real(p1)+0.02)*10 (real(p1)+.01)*10]; % by overshoot & settling time to find; note 5 poles bc of augmented xi
-obs_poles = 5*[p1 p2 real(p1)*10 (real(p1)+0.02)*10]; % 5x times faster than desired poles (could do up to 10x, note only 4 poles bc use regular A and C for observer
+% dominant poles, integral pole, other 2
+des_poles = [p1 p2 -eval(wn) (real(p2)+0.1)*10 (real(p2)+.2)*10]; % by overshoot & settling time to find; note 5 poles bc of augmented xi
+obs_poles = 10*des_poles(1:4); %2*[p1 p2 (real(p1)+0.1)*5 (real(p1)+0.2)*10]; % 5x times faster than desired poles (could do up to 10x, note only 4 poles bc use regular A and C for observer
 
 % for controller, K = place(Aa,Ba,P1) <-- use augmented
-augmentedK = place(Aa, Ba, des_poles) % for augmented, you design observer
-Ki = -1*augmentedK(1); 
-K = augmentedK(2:5);
+augmentedK = place(Aa, Ba, des_poles); % for augmented, you design observer
+Ki = -1*augmentedK(1); %-3.9332; %
+K = augmentedK(2:5); %[-46.4 -10.5 -8.9 -7.9] %
 
 % for observer, L = (place (A',C',P2))' 
-L = place(A', C', obs_poles) %% use regular C and A
+L = place(A', C', obs_poles); %% use regular C and A
 L = L';
+% L = [75.7 5; 1450.3 18.7; 0.3 76.1; 11.6 1447.2];
 
-% need to compute:
-% Feedback Gain: u = -k' x
-% k = place(A, B, R)
-% Anew = A-BK'
-% eig(Anew) = K=place(A,B,R)
-
+% % need to compute:
+% % Feedback Gain: u = -k' x
+% % k = place(A, B, R)
+% % Anew = A-BK'
+% % eig(Anew) = K=place(A,B,R)
+%% CHECK
+% Anew = Aa-Ba*augmentedK;
+% eigOfAnew = eig(Anew)
+% K
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% STEP 4: Build a Simulink model of the nonlinear cart-pendulum plant
