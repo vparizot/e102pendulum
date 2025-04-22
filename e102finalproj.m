@@ -72,13 +72,12 @@ obs_poles = 10*des_poles(1:4); %2*[p1 p2 (real(p1)+0.1)*5 (real(p1)+0.2)*10]; % 
 
 % for controller, K = place(Aa,Ba,P1) <-- use augmented
 augmentedK = place(Aa, Ba, des_poles); % for augmented, you design observer
-Ki = -1*augmentedK(1); %-3.9332; %
-K = augmentedK(2:5); %[-46.4 -10.5 -8.9 -7.9] %
+Ki = -1*augmentedK(1); 
+K = augmentedK(2:5); 
 
 % for observer, L = (place (A',C',P2))' 
 L = place(A', C', obs_poles); %% use regular C and A
 L = L';
-% L = [75.7 5; 1450.3 18.7; 0.3 76.1; 11.6 1447.2];
 
 % % need to compute:
 % % Feedback Gain: u = -k' x
